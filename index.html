@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ビンゴマシーン 完全版</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+    margin:0;
+    background:#111;
+    color:#fff;
+    font-family:sans-serif;
+    text-align:center;
+}
+button{
+    padding:10px 18px;
+    font-size:16px;
+    margin:6px;
+}
+.hidden{display:none;}
+#number{
+    font-size:60px;
+    margin:10px;
+    animation: pop 0.3s;
+}
+@keyframes pop{
+    0%{transform:scale(0.5);}
+    100%{transform:scale(1);}
+}
+.card{
+    display:inline-block;
+    margin:10px;
+}
+table{
+    border-collapse:collapse;
+    margin:auto;
+}
+td{
+    width:45px;
+    height:45px;
+    border:2px solid #fff;
+    text-align:center;
+    font-size:18px;
+}
+.hit{background:#0f0;color:#000;}
+.free{background:orange;}
+.bingo{
+    font-size:26px;
+    color:yellow;
+}
+#drawnList{
+    max-height:100px;
+    overflow:auto;
+    border:1px solid #555;
+    padding:5px;
+}
+</style>
+</head>
+<body>
+
+<!-- オープニング -->
+<div id="start">
+    <h1>🎉 ビンゴマシーン 🎉</h1>
+    <p>プレイヤー人数</p>
+    <select id="playerCount">
+        <option value="1">1人</option>
+        <option value="2">2人</option>
+        <option value="3">3人</option>
+        <option value="4">4人</option>
+    </select><br><br>
+    <button onclick="startGame()">スタート</button>
+</div>
+
+<!-- ゲーム画面 -->
+<div id="game" class="hidden">
+    <h2 id="number">---</h2>
+
+    <button onclick="draw()">抽選</button>
+    <button onclick="toggleAuto()">自動抽選</button>
+    <button onclick="resetAll()">リセット</button>
+
+    <h3>出た数字</h3>
+    <div id="drawnList"></div>
+
+    <div id="players"></div>
+</div>
+
+<audio id="se" src="https://cdn.pixabay.com/audio/2022/03/15/audio_7b0f2d1f27.mp3"></audio>
+<audio id="bingoSe" src="https://cdn.pixabay.com/audio/2022/03/15/audio_75b04fa5e4.mp3"></audio>
+
+<script>
+let numbers=[], drawn=[], players=[], auto=false, timer=null;
+
+function startGame(){
+    document.getElementById("start").classList.add("hidden");
+    document.getElementById("game").classList.remove("hidden");
+
+    const count = Number(document.getElementById("playerCount").value);
+    players=[];
+    for(let i=0;i<count;i++){
+        players.push(makeCard());
+    }
+    initNumbers();
+    renderPlayers();
+}
+
+function initNumbers(){
+    numbers=[];
+    for(let i=1;i<=75;i++) numbers.push(i);
+}
+
+function shuffle(a){
+    for(let i=a.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [a[i],a[j]]=[a[j],a[i]];
+    }
+}
+
+function makeCard(){
+    let nums=[];
+    for(let i=1;i<=75;i++) nums.push(i);
+    shuffle(nums);
+    let c=[];
+    for(let r=0;r<5;r++){
+        c[r]=[];
+        for(let i=0;i<5;i++) c[r][i]=nums.pop();
+    }
+    c[2][2]="FREE";
+    return c;
+}
+
+function renderPlayers(){
+    const area=document.getElementById("players");
+    area.innerHTML="";
+    players.forEach((card,pi)=>{
+        let div=document.createElement("div");
+        div.className="card";
+        div.innerHTML=`<h3>P${pi+1}</h3>`;
+        let table=document.createElement("table");
+
+        for(let r=0;r<5;r++){
+            let tr=document.createElement("tr");
+            for(let c=0;c<5;c++){
+                let td=document.createElement("td");
+                td.textContent=card[r][c];
+                if(card[r][c]==="FREE") td.classList.add("free");
+                tr.appendChild(td);
+            }
+            table.appendChild(tr);
+        }
+        div.appendChild(table);
+        area.appendChild(div);
+    });
+}
+
+function draw(){
+    if(numbers.length===0) return;
+    const n = numbers.splice(Math.floor(Math.random()*numbers.length),1)[0];
+    drawn.push(n);
+    document.getElementById("number").textContent=n;
+    document.getElementById("se").play();
+    updateDrawn();
+    mark(n);
+    checkBingo();
+}
+
+function updateDrawn(){
+    document.getElementById("drawnList").textContent=drawn.join(", ");
+}
+
+function mark(n){
+    document.querySelectorAll("td").forEach(td=>{
+        if(Number(td.textContent)===n) td.classList.add("hit");
+    });
+}
+
+function checkBingo(){
+    players.forEach((card,i)=>{
+        let b=[];
+        for(let r=0;r<5;r++){
+            b[r]=[];
+            for(let c=0;c<5;c++){
+                b[r][c]= card[r][c]==="FREE" || drawn.includes(card[r][c]);
+            }
+        }
+        for(let k=0;k<5;k++){
+            if(b[k].every(v=>v)||b.map(r=>r[k]).every(v=>v)){
+                bingo(i);
+            }
+        }
+        if([0,1,2,3,4].every(i=>b[i][i])) bingo(i);
+        if([0,1,2,3,4].every(i=>b[i][4-i])) bingo(i);
+    });
+}
+
+function bingo(i){
+    document.getElementById("bingoSe").play();
+    document.querySelectorAll(".card")[i].querySelector("h3").textContent="🎉 BINGO! 🎉";
+}
+
+function toggleAuto(){
+    auto=!auto;
+    if(auto){
+        timer=setInterval(draw,1500);
+    }else{
+        clearInterval(timer);
+    }
+}
+
+function resetAll(){
+    location.reload();
+}
+</script>
+
+</body>
+</html>
