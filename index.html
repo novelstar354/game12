@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>ビンゴマシーン 完全版</title>
+<title>BINGO 完全版</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{
@@ -12,94 +12,77 @@ body{
     font-family:sans-serif;
     text-align:center;
 }
-button{
-    padding:10px 18px;
-    font-size:16px;
-    margin:6px;
-}
+h1 span{font-size:40px;color:#0ff;}
+button{padding:10px 18px;font-size:16px;margin:6px;}
 .hidden{display:none;}
-#number{
-    font-size:60px;
-    margin:10px;
-    animation: pop 0.3s;
-}
-@keyframes pop{
-    0%{transform:scale(0.5);}
-    100%{transform:scale(1);}
-}
-.card{
-    display:inline-block;
-    margin:10px;
-}
-table{
-    border-collapse:collapse;
-    margin:auto;
-}
-td{
-    width:45px;
-    height:45px;
-    border:2px solid #fff;
-    text-align:center;
-    font-size:18px;
-}
+#number{font-size:70px;margin:15px;animation:pop .4s;}
+@keyframes pop{0%{transform:scale(.3)}100%{transform:scale(1)}}
+.card{display:inline-block;margin:10px;}
+table{border-collapse:collapse;margin:auto;}
+td{width:45px;height:45px;border:2px solid #fff;font-size:18px;}
 .hit{background:#0f0;color:#000;}
 .free{background:orange;}
-.bingo{
-    font-size:26px;
-    color:yellow;
-}
-#drawnList{
-    max-height:100px;
-    overflow:auto;
-    border:1px solid #555;
-    padding:5px;
-}
+#drawnList{max-height:80px;overflow:auto;border:1px solid #555;padding:5px;}
+canvas{position:fixed;left:0;top:0;pointer-events:none;}
+input[type=range]{width:200px;}
 </style>
 </head>
 <body>
 
-<!-- オープニング -->
+<h1><span>B</span><span>I</span><span>N</span><span>G</span><span>O</span></h1>
+
 <div id="start">
-    <h1>🎉 ビンゴマシーン 🎉</h1>
     <p>プレイヤー人数</p>
     <select id="playerCount">
-        <option value="1">1人</option>
-        <option value="2">2人</option>
-        <option value="3">3人</option>
-        <option value="4">4人</option>
+        <option>1</option><option>2</option><option>3</option><option>4</option>
     </select><br><br>
     <button onclick="startGame()">スタート</button>
 </div>
 
-<!-- ゲーム画面 -->
 <div id="game" class="hidden">
-    <h2 id="number">---</h2>
+    <div id="number">---</div>
 
     <button onclick="draw()">抽選</button>
-    <button onclick="toggleAuto()">自動抽選</button>
+    <button onclick="toggleAuto()">自動</button>
     <button onclick="resetAll()">リセット</button>
 
-    <h3>出た数字</h3>
-    <div id="drawnList"></div>
+    <p>🔊 音量</p>
+    <input type="range" min="0" max="1" step="0.01" value="0.5" oninput="setVolume(this.value)">
 
+    <div id="drawnList"></div>
     <div id="players"></div>
 </div>
+
+<canvas id="confetti"></canvas>
 
 <audio id="se" src="https://cdn.pixabay.com/audio/2022/03/15/audio_7b0f2d1f27.mp3"></audio>
 <audio id="bingoSe" src="https://cdn.pixabay.com/audio/2022/03/15/audio_75b04fa5e4.mp3"></audio>
 
 <script>
-let numbers=[], drawn=[], players=[], auto=false, timer=null;
+let numbers=[], drawn=[], players=[], auto=false, timer;
+const canvas=document.getElementById("confetti");
+const ctx=canvas.getContext("2d");
+const se=document.getElementById("se");
+const bingoSe=document.getElementById("bingoSe");
+
+function setVolume(v){
+    se.volume=v;
+    bingoSe.volume=v;
+}
+
+function resize(){
+    canvas.width=innerWidth;
+    canvas.height=innerHeight;
+}
+window.onresize=resize;
+resize();
 
 function startGame(){
     document.getElementById("start").classList.add("hidden");
     document.getElementById("game").classList.remove("hidden");
-
-    const count = Number(document.getElementById("playerCount").value);
     players=[];
-    for(let i=0;i<count;i++){
-        players.push(makeCard());
-    }
+    let c=Number(document.getElementById("playerCount").value);
+    for(let i=0;i<c;i++) players.push(makeCard());
     initNumbers();
     renderPlayers();
 }
@@ -109,56 +92,47 @@ function initNumbers(){
     for(let i=1;i<=75;i++) numbers.push(i);
 }
 
-function shuffle(a){
-    for(let i=a.length-1;i>0;i--){
-        const j=Math.floor(Math.random()*(i+1));
-        [a[i],a[j]]=[a[j],a[i]];
-    }
-}
+function range(a,b){return [...Array(b-a+1)].map((_,i)=>a+i);}
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
 
 function makeCard(){
-    let nums=[];
-    for(let i=1;i<=75;i++) nums.push(i);
-    shuffle(nums);
-    let c=[];
-    for(let r=0;r<5;r++){
-        c[r]=[];
-        for(let i=0;i<5;i++) c[r][i]=nums.pop();
-    }
-    c[2][2]="FREE";
-    return c;
+    let B=range(1,15),I=range(16,30),N=range(31,45),G=range(46,60),O=range(61,75);
+    [B,I,N,G,O].forEach(shuffle);
+    return [...Array(5)].map((_,r)=>[
+        B[r],I[r],r===2?"FREE":N[r],G[r],O[r]
+    ]);
 }
 
 function renderPlayers(){
     const area=document.getElementById("players");
     area.innerHTML="";
-    players.forEach((card,pi)=>{
+    players.forEach((card,i)=>{
         let div=document.createElement("div");
         div.className="card";
-        div.innerHTML=`<h3>P${pi+1}</h3>`;
-        let table=document.createElement("table");
-
-        for(let r=0;r<5;r++){
+        div.innerHTML=`<h3>P${i+1}</h3>`;
+        let t=document.createElement("table");
+        card.forEach(row=>{
             let tr=document.createElement("tr");
-            for(let c=0;c<5;c++){
+            row.forEach(v=>{
                 let td=document.createElement("td");
-                td.textContent=card[r][c];
-                if(card[r][c]==="FREE") td.classList.add("free");
+                td.textContent=v;
+                if(v==="FREE") td.classList.add("free");
                 tr.appendChild(td);
-            }
-            table.appendChild(tr);
-        }
-        div.appendChild(table);
+            });
+            t.appendChild(tr);
+        });
+        div.appendChild(t);
         area.appendChild(div);
     });
 }
 
 function draw(){
     if(numbers.length===0) return;
-    const n = numbers.splice(Math.floor(Math.random()*numbers.length),1)[0];
+    let n=numbers.splice(Math.floor(Math.random()*numbers.length),1)[0];
     drawn.push(n);
     document.getElementById("number").textContent=n;
-    document.getElementById("se").play();
+    se.currentTime=0;
+    se.play();
     updateDrawn();
     mark(n);
     checkBingo();
@@ -176,41 +150,56 @@ function mark(n){
 
 function checkBingo(){
     players.forEach((card,i)=>{
-        let b=[];
-        for(let r=0;r<5;r++){
-            b[r]=[];
-            for(let c=0;c<5;c++){
-                b[r][c]= card[r][c]==="FREE" || drawn.includes(card[r][c]);
-            }
-        }
+        let b=[...Array(5)].map(()=>Array(5).fill(false));
+        for(let r=0;r<5;r++)for(let c=0;c<5;c++)
+            b[r][c]=card[r][c]==="FREE"||drawn.includes(card[r][c]);
         for(let k=0;k<5;k++){
-            if(b[k].every(v=>v)||b.map(r=>r[k]).every(v=>v)){
-                bingo(i);
-            }
+            if(b[k].every(v=>v)||b.map(r=>r[k]).every(v=>v)) win(i);
         }
-        if([0,1,2,3,4].every(i=>b[i][i])) bingo(i);
-        if([0,1,2,3,4].every(i=>b[i][4-i])) bingo(i);
+        if([0,1,2,3,4].every(i=>b[i][i])) win(i);
+        if([0,1,2,3,4].every(i=>b[i][4-i])) win(i);
     });
 }
 
-function bingo(i){
-    document.getElementById("bingoSe").play();
+function win(i){
+    bingoSe.currentTime=0;
+    bingoSe.play();
     document.querySelectorAll(".card")[i].querySelector("h3").textContent="🎉 BINGO! 🎉";
+    confetti();
 }
 
 function toggleAuto(){
     auto=!auto;
-    if(auto){
-        timer=setInterval(draw,1500);
-    }else{
-        clearInterval(timer);
-    }
+    auto ? timer=setInterval(draw,1500) : clearInterval(timer);
 }
 
 function resetAll(){
     location.reload();
 }
-</script>
 
+function confetti(){
+    let p=[];
+    for(let i=0;i<150;i++){
+        p.push({
+            x:Math.random()*canvas.width,
+            y:-10,
+            r:Math.random()*6+4,
+            c:`hsl(${Math.random()*360},100%,50%)`,
+            v:Math.random()*3+2
+        });
+    }
+    let t=setInterval(()=>{
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        p.forEach(o=>{
+            o.y+=o.v;
+            ctx.fillStyle=o.c;
+            ctx.beginPath();
+            ctx.arc(o.x,o.y,o.r,0,Math.PI*2);
+            ctx.fill();
+        });
+    },30);
+    setTimeout(()=>clearInterval(t),2000);
+}
+</script>
 </body>
 </html>
