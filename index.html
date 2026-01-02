@@ -22,7 +22,14 @@ table{border-collapse:collapse;margin:auto;}
 td{width:45px;height:45px;border:2px solid #fff;font-size:18px;}
 .hit{background:#0f0;color:#000;}
 .free{background:orange;}
-#drawnList{max-height:80px;overflow:auto;border:1px solid #555;padding:5px;}
+#drawnList{
+    max-height:120px;
+    overflow:auto;
+    border:1px solid #555;
+    padding:5px;
+    margin:10px;
+    display:none;
+}
 canvas{position:fixed;left:0;top:0;pointer-events:none;}
 input[type=range]{width:200px;}
 </style>
@@ -44,10 +51,12 @@ input[type=range]{width:200px;}
 
     <button onclick="draw()">抽選</button>
     <button onclick="toggleAuto()">自動</button>
+    <button onclick="toggleFullscreen()">全画面</button>
+    <button onclick="toggleDrawn()">出た数字</button>
     <button onclick="resetAll()">リセット</button>
 
     <p>🔊 音量</p>
-    <input type="range" min="0" max="1" step="0.01" value="0.5" oninput="setVolume(this.value)">
+    <input id="volume" type="range" min="0" max="1" step="0.01">
 
     <div id="drawnList"></div>
     <div id="players"></div>
@@ -60,15 +69,12 @@ input[type=range]{width:200px;}
 
 <script>
 let numbers=[], drawn=[], players=[], auto=false, timer;
-const canvas=document.getElementById("confetti");
-const ctx=canvas.getContext("2d");
 const se=document.getElementById("se");
 const bingoSe=document.getElementById("bingoSe");
+const volumeSlider=document.getElementById("volume");
 
-function setVolume(v){
-    se.volume=v;
-    bingoSe.volume=v;
-}
+const canvas=document.getElementById("confetti");
+const ctx=canvas.getContext("2d");
 
 function resize(){
     canvas.width=innerWidth;
@@ -76,6 +82,34 @@ function resize(){
 }
 window.onresize=resize;
 resize();
+
+/* 音量保存 */
+let savedVolume = localStorage.getItem("bingoVolume");
+if(savedVolume===null) savedVolume = 0.5;
+volumeSlider.value = savedVolume;
+setVolume(savedVolume);
+
+function setVolume(v){
+    se.volume = v;
+    bingoSe.volume = v;
+    localStorage.setItem("bingoVolume", v);
+}
+volumeSlider.oninput = e => setVolume(e.target.value);
+
+/* フルスクリーン */
+function toggleFullscreen(){
+    if(!document.fullscreenElement){
+        document.documentElement.requestFullscreen();
+    }else{
+        document.exitFullscreen();
+    }
+}
+
+/* 出た数字表示切替 */
+function toggleDrawn(){
+    const d=document.getElementById("drawnList");
+    d.style.display = d.style.display==="none" ? "block" : "none";
+}
 
 function startGame(){
     document.getElementById("start").classList.add("hidden");
